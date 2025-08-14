@@ -10,6 +10,7 @@ type partial struct {
 	name   string
 	source string
 	tpl    *Template
+	mu     sync.RWMutex // protects tpl
 }
 
 // partials stores all global partials
@@ -88,14 +89,17 @@ func findPartial(name string) *partial {
 
 // template returns parsed partial template
 func (p *partial) template() (*Template, error) {
-	if p.tpl == nil {
-		var err error
+	var err error
 
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	if p.tpl == nil {
+		p.mu.RUnlock()
+		p.mu.Lock()
 		p.tpl, err = Parse(p.source)
-		if err != nil {
-			return nil, err
-		}
+		p.mu.Unlock()
+		p.mu.RLock()
 	}
 
-	return p.tpl, nil
+	return p.tpl, err
 }
