@@ -92,6 +92,7 @@ func (p *partial) template() (*Template, error) {
 	var err error
 
 	p.mu.RLock()
+	defer p.mu.RUnlock()
 	if p.tpl == nil {
 		p.mu.RUnlock()
 		p.mu.Lock()
@@ -99,7 +100,6 @@ func (p *partial) template() (*Template, error) {
 		p.mu.Unlock()
 		p.mu.RLock()
 	}
-	p.mu.RUnlock()
 
 	return p.tpl, err
 }
