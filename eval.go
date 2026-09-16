@@ -586,6 +586,7 @@ func (v *evalVisitor) callFunc(name string, funcVal reflect.Value, options *Opti
 	// @todo Is there a better way to do that ?
 	strType := reflect.TypeOf("")
 	boolType := reflect.TypeOf(true)
+	optionsType := reflect.TypeOf(options)
 
 	// check parameters number
 	addOptions := false
@@ -593,7 +594,7 @@ func (v *evalVisitor) callFunc(name string, funcVal reflect.Value, options *Opti
 
 	if numIn == len(params)+1 {
 		lastArgType := funcType.In(numIn - 1)
-		if reflect.TypeOf(options).AssignableTo(lastArgType) {
+		if optionsType.AssignableTo(lastArgType) {
 			addOptions = true
 		}
 	}
@@ -609,6 +610,12 @@ func (v *evalVisitor) callFunc(name string, funcVal reflect.Value, options *Opti
 		argType := funcType.In(i)
 
 		if !arg.IsValid() {
+			if argType == optionsType {
+				// A missing param must never stand in for the options argument:
+				// every helper dereferences it without a nil check.
+				v.errorf("Helper '%s' called with wrong number of arguments, needed %d but got %d", name, numIn-1, len(params))
+			}
+
 			if canBeNil(argType) {
 				arg = reflect.Zero(argType)
 			} else if argType.Kind() == reflect.String {
